@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 """
 class:
     Elevator
@@ -15,31 +17,84 @@ methods:
     move_down
     open
 """
+
 class Elevator:
-    def __init__(self, num_floors, default_floor = 1):
-        self.num_floors = num_floors
-        if (default_floor > num_floors):
-            self.default_floor = 1
-        else:
-            self.default_floor = default_floor
+    def __init__(self, num_floors, default_floor=1, acceleration=2.5, max_speed=5, floor_size=10, rate=.1, open_rate=1):
+        self.default_floor = default_floor
         self.current_floor = self.default_floor
-        self.direction = True #going up 
-        self.wanted_floors = []
-
-    def move_up(self):
-        if self.current_floor < self.num_floors:
-            self.current_floor += 1
-
-    def move_down(self):
-        if self.current_floor > 0:
-            self.current_floor -= 1
+        self.max_floor = num_floors
+        self.wanted_floors = [[] for _ in range(self.max_floor)]
+        self.acceleration = acceleration
+        self.max_speed = max_speed
+        self.speed = 0
+        self.position = (self.current_floor - 1) * floor_size
+        self.floor_size = floor_size
+        self.rate = rate
+        self.open_rate = open_rate
+        self.temp_desired_pos = 0
     
+    @staticmethod
+    def distance_to_stop(initial_speed, acceleration, position, desired_position):
+        #acceleration *= -1 if desired_position > position else 1
+        difference = (initial_speed ** 2) / acceleration / 2
+        return position + difference if desired_position > position else position - difference
+
+    def approach(self, desired_floor):
+        desired_position = (desired_floor - 1) * self.floor_size
+        self.temp_desired_pos = desired_position
+        thresh = self.floor_size * self.rate / 5
+        if desired_floor == self.current_floor:  # if on the floor
+            self.speed = 0
+            self.position = desired_position  # setting position
+            return self.open()
+        else:
+            """
+            2 main cases, 2 sub cases within each
+            - elevator is close to desired_position
+                - elevator is below desired_position
+                - elevator is above desired_position
+            - elevator is not close to desired_position
+                - elevator is below desired_position
+                - elevator is above desired_position
+            """
+            stop_distance = Elevator.distance_to_stop(self.speed, self.acceleration, self.position, desired_position)
+            if desired_position > self.position: #elevator is below
+                if stop_distance >= desired_position - thresh: #elevator is close and elevator is below
+                    acc = -1 * self.acceleration
+                else:
+                    acc = 0 if self.speed >= self.max_speed else self.acceleration
+            else: #elevator is above
+                if stop_distance <= desired_position + thresh: #elevator is close and elevator is above
+                    acc = self.acceleration
+                else:
+                    acc = 0 if self.speed <= -1 * self.max_speed else -1 * self.acceleration
+            
+            self.temp_desired_pos = stop_distance
+
+            initial_speed = self.speed
+            final_speed = self.speed + acc * self.rate
+            final_speed = self.max_speed if final_speed > 5 else self.max_speed * -1 if final_speed < -5 else final_speed
+
+            diff = (initial_speed + final_speed) / 2 * self.rate
+            
+            #print(diff)
+            
+            self.position = self.position + diff #self.rate * self.speed + self.rate ** 2 * acc / 2
+
+            self.speed = final_speed
+            self.position = round(self.position, 8)
+            close_to_floor = abs(self.floor_size/2 - (self.position % self.floor_size)) > thresh
+            if close_to_floor and abs(self.speed) < self.max_speed/2: 
+                self.current_floor = round(self.position / self.floor_size + 1)
+        return False
+
     def open(self):
-        for _ in range(self.wanted_floors.count(self.current_floor)):
-            self.wanted_floors.remove(self.current_floor)
+        return True
 
     def __repr__(self):
-        return "Number of Floors: {}\nDefault Floor: {}\nPosition: {}\n".format(self.num_floors, self.default_floor, self.current_floor)
+        return "Desired Position: {}\nSpeed: {}\nPosition: {}\nAcceleration: {}\nFloor: {}\n"\
+            .format(self.temp_desired_pos, self.speed, self.position, self.acceleration, self.current_floor)
+
 
 """
 class: ElevatorRunner
@@ -56,11 +111,17 @@ methods:
     move_elevators  
 
 """
+
+
 class ElevatorRunner:
-    def __init__(self):
+    def __init__(self, animation=True):
         self.elevators = []
         self.floors = [[]]
         self.max_floor = None
+        self.animation = animation
+        if(animation):
+            self.floors_states = []
+            #self.fig = plt.figure(figsize=(10,10))
 
     def add_elevator(self, elev):
         """
@@ -70,41 +131,68 @@ class ElevatorRunner:
             self.elevators.append(e)
         self.max_floor = max([e.num_floors for e in self.elevators])
         self.floors = [[] for floor in range(self.max_floor)]
-    
-    def generate(self, rate = .25):
+
+    def generate(self, rate=.25):
         """
         arguments: rate is proportion of successful generation
         """
-        #cond - elevators has to have the same num_floors
+        # cond - elevators has to have the same num_floors
         if self.max_floor:
             if np.random.uniform() < rate:
                 choices = [i for i in range(self.max_floor)]
-                index_of_floor = choices.pop(np.random.choice(choices)) #finding which floor people are on
-                self.floors[index_of_floor].append(np.random.choice(choices)) #selecting a random floor from the floors left
-
-
+                # finding which floor people are on
+                index_of_floor = choices.pop(np.random.choice(choices))
+                # selecting a random floor from the floors left
+                self.floors[index_of_floor].append(np.random.choice(choices))
+            if(self.animation):
+                self.floors_states.append(self.floors)
 
     def move_elevators(self):
+        if len(self.elevators) > 0:
+            pass
+
+    def make_frame(self, x_list):
+        pass
+
+    def make_animation(self):
         pass
 
     def simulate(self):
-        #represents 1 unit of time
+        # represents 1 unit of time
         self.generate(.1)
         self.move_elevators()
 
 
-    
-    
-
-        
-
-
 if __name__ == '__main__':
-    e1 = Elevator(4)
-    e2 = Elevator(4)
 
-    runner = ElevatorRunner()
-    runner.add_elevator([e1, e2])
-    runner.generate(rate = 1)
-    print(runner.floors)
+    #print(Elevator.distance_to_stop(initial_speed = -10, acceleration = 10, position = 100, desired_position = 90))
 
+
+    # e1 = Elevator(num_floors = 10, rate=1, default_floor=8)
+    # i = 1
+    # print(i, ":\n", e1)
+    # while not e1.approach(2):
+    #     i+=1
+    #     print(i, ":\n", e1)
+    # print(i * e1.rate)
+    def tester(rate, floor):
+        e1 = Elevator(num_floors = 10, rate=rate, default_floor=1)
+        i = 1
+        while not e1.approach(floor):
+            i+=1
+        print(rate, " seconds: ", i * rate, floor)
+    tester(1, 8)
+    tester(.5, 8)
+    tester(.2, 8)
+    tester(.1, 8)
+    tester(.01, 8)
+    tester(1, 8)
+    
+
+
+    """
+Number of Floors: 10
+Speed: 5.0
+Position: 5.750000000000001
+Acceleration: 2.5
+    """
