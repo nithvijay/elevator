@@ -19,7 +19,7 @@ methods:
 """
 
 class Elevator:
-    def __init__(self, num_floors, default_floor=1, acceleration=2.5, max_speed=5, floor_size=10, rate=.1, open_rate=1):
+    def __init__(self, num_floors, default_floor=1, acceleration=1, max_speed=5, floor_size=10, rate=.05, open_rate=1):
         self.default_floor = default_floor
         self.current_floor = self.default_floor
         self.max_floor = num_floors
@@ -32,6 +32,7 @@ class Elevator:
         self.rate = rate
         self.open_rate = open_rate
         self.temp_desired_pos = 0
+        self.time_elapsed = 0
     
     @staticmethod
     def distance_to_stop(initial_speed, acceleration, position, desired_position):
@@ -40,6 +41,7 @@ class Elevator:
         return position + difference if desired_position > position else position - difference
 
     def approach(self, desired_floor):
+        self.time_elapsed+=self.rate
         desired_position = (desired_floor - 1) * self.floor_size
         self.temp_desired_pos = desired_position
         thresh = self.floor_size * self.rate / 5
@@ -59,12 +61,12 @@ class Elevator:
             """
             stop_distance = Elevator.distance_to_stop(self.speed, self.acceleration, self.position, desired_position)
             if desired_position > self.position: #elevator is below
-                if stop_distance >= desired_position - thresh: #elevator is close and elevator is below
+                if stop_distance >= desired_position: #elevator is close and elevator is below
                     acc = -1 * self.acceleration
                 else:
                     acc = 0 if self.speed >= self.max_speed else self.acceleration
             else: #elevator is above
-                if stop_distance <= desired_position + thresh: #elevator is close and elevator is above
+                if stop_distance <= desired_position: #elevator is close and elevator is above
                     acc = self.acceleration
                 else:
                     acc = 0 if self.speed <= -1 * self.max_speed else -1 * self.acceleration
@@ -76,20 +78,26 @@ class Elevator:
             final_speed = self.max_speed if final_speed > 5 else self.max_speed * -1 if final_speed < -5 else final_speed
 
             diff = (initial_speed + final_speed) / 2 * self.rate
-            
-            #print(diff)
-            
-            self.position = self.position + diff #self.rate * self.speed + self.rate ** 2 * acc / 2
+            self.position = self.position + diff
 
-            self.speed = final_speed
-            self.position = round(self.position, 8)
-            close_to_floor = abs(self.floor_size/2 - (self.position % self.floor_size)) > thresh
-            if close_to_floor and abs(self.speed) < self.max_speed/2: 
+            self.speed = round(final_speed, 5)
+            self.position = round(self.position, 5)
+            
+            #close_to_floor = abs(self.floor_size/2 - (self.position % self.floor_size)) > thresh
+            close_to_floor = (self.position + thresh) % self.floor_size < thresh * 2
+            if close_to_floor and abs(self.speed) < self.max_speed/2: #if its close and slow enough
                 self.current_floor = round(self.position / self.floor_size + 1)
         return False
 
     def open(self):
         return True
+    
+    def add_in_elevator(self, wanted_floor):
+        for _ in range(int(1/self.rate)):
+            self.wanted_floors.append(wanted_floor)
+
+    def output(self):
+        return (self.position, self.speed)
 
     def __repr__(self):
         return "Desired Position: {}\nSpeed: {}\nPosition: {}\nAcceleration: {}\nFloor: {}\n"\
@@ -175,18 +183,34 @@ if __name__ == '__main__':
     #     i+=1
     #     print(i, ":\n", e1)
     # print(i * e1.rate)
-    def tester(rate, floor):
-        e1 = Elevator(num_floors = 10, rate=rate, default_floor=1)
-        i = 1
-        while not e1.approach(floor):
-            i+=1
-        print(rate, " seconds: ", i * rate, floor)
-    tester(1, 8)
-    tester(.5, 8)
-    tester(.2, 8)
-    tester(.1, 8)
-    tester(.01, 8)
-    tester(1, 8)
+    elevator_states = []
+    # def tester(rate, floor):
+    #     e1 = Elevator(num_floors = 10, rate=rate, default_floor=1)
+    #     i = 1
+    #     while not e1.approach(floor):
+    #         i+=1
+    #     print(rate, " seconds: ", i * rate, floor)
+    # tester(1, 8)
+    # tester(.5, 8)
+    # tester(.2, 8)
+    # tester(.1, 8)
+    # tester(.01, 8)
+    # tester(1, 8)
+    e1 = Elevator(num_floors=10, default_floor=1)
+    floor = 4
+    while not e1.approach(floor):
+        elevator_states.append(e1.output())
+    floor = 7
+    while not e1.approach(floor):
+        elevator_states.append(e1.output())
+    print(elevator_states)
+    floor = 5
+    while not e1.approach(floor):
+        elevator_states.append(e1.output())
+    print(elevator_states)
+    from animation import make_plot
+    make_plot(elevator_states)
+
     
 
 
