@@ -5,3 +5,5 @@ __pycache__
 test.py
 *.ipynb_checkpoints
 *.ipynb
+.ipynb_checkpoints
+.vscode

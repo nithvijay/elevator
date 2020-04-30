@@ -1,26 +1,9 @@
 import numpy as np
-"""
-class:
-    Elevator
-
-attributes:
-    current_floor       int     floors
-    num_floors          int     the max number of floors    
-    default_floor       int     default floor to go
-    wanted_floors[]     int     which floors people want to go
-    direction           bool    true is up
-
-methods:
-    move_up
-    move_down
-    open
-"""
 
 settings = {}
 settings['dt'] = 0.1
 settings['acceleration'] = 1
 settings['max_speed'] = 5
-
 
 class Elevator:
     def __init__(self, num_floors, default_floor=1, floor_size=10, open_rate=1):
@@ -53,12 +36,12 @@ class Elevator:
         else:
             """
             2 main cases, 2 sub cases within each
-            - elevator is close to desired_position
-                - elevator is below desired_position
-                - elevator is above desired_position
-            - elevator is not close to desired_position
-                - elevator is below desired_position
-                - elevator is above desired_position
+            - elevator is below desired position
+                - elevator is close to desired_position
+                - elevator is not close to desired_position
+            - elevator is above desired position
+                - elevator is close to desired position
+                - elevator is not close to desired_position
             """
             stop_distance = Elevator.distance_to_stop(
                 self.speed, self.position, desired_position)
@@ -119,24 +102,6 @@ class Elevator:
         return "Speed: {}\nPosition: {}\nAcceleration: {}\nFloor: {}\n"\
             .format(self.speed, self.position, settings['acceleration'], self.current_floor)
 
-
-"""
-class: ElevatorRunner
-
-attributes:
-    elevators[]     Elevator    list of Elevator Objects
-    floors[[]]      int         floors and what floors people want to go to
-
-
-methods:
-    simulate    the main function to progress; calls generate and move_elevators
-    generate  
-    add_elevator
-    move_elevators  
-
-"""
-
-
 class ElevatorRunner:
     def __init__(self, elevators, animation=False):
         self.elevators = elevators
@@ -178,8 +143,7 @@ class ElevatorRunner:
         else:
             return None
 
-    def simulate(self, time, gen_rate, algo):
-        next_floor_algorithm = algo
+    def simulate(self, time, gen_rate):
         # represents 1 unit of time
         next_floor = self.next_floor()
         for _ in range(int(time/settings['dt'])):
@@ -192,19 +156,3 @@ class ElevatorRunner:
             if self.animation:
                 self.elevator_states.append(self.elevators[0].output())
         return self.elevators[0].fitness
-
-
-if __name__ == '__main__':
-    from time import time
-    t1 = time()
-    np.random.seed(0)
-    e1 = Elevator(num_floors=10, default_floor=1)
-    er1 = ElevatorRunner([e1], animation=True)
-    er1.simulate(1000, .05)
-    from animation import make_plot
-
-    make_plot(er1.elevator_states, save=False)
-
-    # print(er1.elevator_states)
-    print(time() - t1)
-    pass
